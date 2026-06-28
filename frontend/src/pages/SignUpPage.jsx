@@ -1,14 +1,20 @@
-
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore.js";
-import {MessageSquare,User,Mail,Lock,Eye,EyeOff,Loader2} from "lucide-react";
+import {
+  MessageSquare,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import AuthImagePattern from "../components/AuthImagePattern.jsx";
-import {toast} from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -19,27 +25,29 @@ const SignUpPage = () => {
   const { signup, isSigningUp } = useAuthStore();
 
   const validateForm = () => {
-    if(!formData.fullName.trim())return toast.error("Full name is required");
-    if(!formData.email.trim())return toast.error("Email is required");
-    if (!/\S+@\S+\.\S+/.test(formData.email))return toast.error("Invalid email format");
-    if(!formData.password)return toast.error("password is required");
-    if(formData.password.length<6)return toast.error("password must be atleast 6 characters");
+    if (!formData.fullName.trim()) return toast.error("Full name is required");
+    if (!formData.email.trim()) return toast.error("Email is required");
+    if (!/\S+@\S+\.\S+/.test(formData.email))
+      return toast.error("Invalid email format");
+    if (!formData.password) return toast.error("password is required");
+    if (formData.password.length < 6)
+      return toast.error("password must be atleast 6 characters");
     return true;
   };
 
-//   const handleSubmit = (e) => {
-//     e.preventDefault();
-//     const success=validateForm();
-//     if(success===true)signup(formData);
-//   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  const success = validateForm();
-  if (!success) return;
+  //   const handleSubmit = (e) => {
+  //     e.preventDefault();
+  //     const success=validateForm();
+  //     if(success===true)signup(formData);
+  //   };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  await signup(formData);
-};
+    const success = validateForm();
+    if (!success) return;
+
+    await signup(formData);
+  };
   return (
     <>
       <div className="min-h-screen grid lg:grid-cols-2">
@@ -52,9 +60,7 @@ const handleSubmit = async (e) => {
                   <MessageSquare className="size-6 text-primary" />
                 </div>
 
-                <h1 className="text-2xl font-bold mt-2">
-                  Create Account
-                </h1>
+                <h1 className="text-2xl font-bold mt-2">Create Account</h1>
 
                 <p className="text-base-content/60">
                   Get started with your free account
@@ -63,13 +69,10 @@ const handleSubmit = async (e) => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-
               {/* Full Name */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">
-                    Full Name
-                  </span>
+                  <span className="label-text font-medium">Full Name</span>
                 </label>
 
                 <div className="relative">
@@ -95,9 +98,7 @@ const handleSubmit = async (e) => {
               {/* Email */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">
-                    Email
-                  </span>
+                  <span className="label-text font-medium">Email</span>
                 </label>
 
                 <div className="relative">
@@ -123,9 +124,7 @@ const handleSubmit = async (e) => {
               {/* Password */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">
-                    Password
-                  </span>
+                  <span className="label-text font-medium">Password</span>
                 </label>
 
                 <div className="relative">
@@ -159,28 +158,36 @@ const handleSubmit = async (e) => {
                   </button>
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary w-full"disabled={isSigningUp}>
-                {isSigningUp ?(
-                    <>
-                    <Loader2 className="size-5 animate-spin"/>
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                disabled={isSigningUp}
+              >
+                {isSigningUp ? (
+                  <>
+                    <Loader2 className="size-5 animate-spin" />
                     Loading...
-                    </>
-
-                ):(
-                    "Create Account"
+                  </>
+                ) : (
+                  "Create Account"
                 )}
               </button>
-
             </form>
             <div className="text-center">
-                <p className="text-base-content/60">
+              <p className="text-base-content/60">
                 Already have an account?{" "}
-                <Link to="/login"className="link link-primary">Sign in</Link></p>
+                <Link to="/login" className="link link-primary">
+                  Sign in
+                </Link>
+              </p>
             </div>
           </div>
         </div>
         {/* right side */}
-        <AuthImagePattern title="join our community" subtitle="Connect with friends,share moments, and stay in touch with your loved ones"/>
+        <AuthImagePattern
+          title="join our community"
+          subtitle="Connect with friends,share moments, and stay in touch with your loved ones"
+        />
       </div>
     </>
   );

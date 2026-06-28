@@ -98,7 +98,7 @@ export const getMessages = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const { text, image } = req.body;
-    const { id: receiverId } = req.params;
+    const  receiverId  = req.params.id;
     const senderId = req.user._id;
 
     let imageUrl = "";
@@ -109,26 +109,26 @@ export const sendMessage = async (req, res) => {
     }
 
     const newMessage = new Message({
-      sender: senderId,
-      receiver: receiverId,
-      message: text,
+      senderId,
+      receiverId,
+      text,
       image: imageUrl,
     });
 
     await newMessage.save();
-    
-  // todo
-  const receiverSocketId=getReceiverSocketId(receiverId);
-  if(receiverSocketId){
-    io.to(receiverSocketId).emit("newMessage",newMessage);
-  }
+
+    // todo
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
     res.status(201).json(newMessage);
   } catch (error) {
     console.log("========== CLOUDINARY ERROR ==========");
     console.log(error);
     console.log("Message:", error.message);
     console.log("HTTP Code:", error.http_code);
-    
+
     res.status(500).json({
       message: error.message,
     });

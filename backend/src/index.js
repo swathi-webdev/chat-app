@@ -11,13 +11,9 @@ import {app,server} from './lib/socket.js';
 dotenv.config();
 import path from "path";
 
-// const express=require('express');
-// app.use("/api/auth",authRoutes);
-
-
 const PORT=process.env.PORT;
 const __dirname=path.resolve();
-// app.use(express.json());
+
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(cors({

@@ -18,16 +18,14 @@ const SidebarSkeleton = () => {
           <div key={idx} className="w-full p-3 flex-items-center gap-3">
             {/* avartar skeleton */}
             <div className="relative mx-auto lg:mx-0">
-              <div className="skeleton size-12 rounded-full"/>
-             
+              <div className="skeleton size-12 rounded-full" />
             </div>
             {/* user info skeleton - only visible in large screen */}
             <div className="hidden lg:block text-left min-w-0 flex-1">
-                <div className="skeleton h-4 w-32 mb-2"/>
-                    <div className="skeleton h-3 w-16 "/>
-                    
-                </div>
-          </div>
+              <div className="skeleton h-4 w-32 mb-2" />
+              <div className="skeleton h-3 w-16 " />
+            </div>
+          </div>;
         })}
       </div>
     </aside>
