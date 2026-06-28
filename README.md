@@ -11,18 +11,18 @@ This is a real-time chat application built using the MERN stack. It allows users
 6.Responsive UI for mobile and desktop
 
 🧰 Tech used
-Frontend
-React (Vite)
-Zustand for state management
-Tailwind CSS
-Axios
+Frontend:
+React (Vite),
+Zustand for state management,
+Tailwind CSS,
+Axios.
 
-Backend
-Node.js
-Express.js
-MongoDB (Mongoose)
-Socket.io
-Cloudinary
+Backend:
+Node.js,
+Express.js,
+MongoDB (Mongoose),
+Socket.io,
+Cloudinary.
 
 📁 Project structure
 Frontend contains UI components, pages, and stores for state management.
