@@ -34,5 +34,5 @@ This is a real-time chat application built using the MERN stack. It allows users
 
 ## 📁 Project Structure
 
-- **Frontend** → UI components, pages, and state management stores  
-- **Backend** → APIs, authentication, database models, and Socket.io real-time communication  
+- **Frontend** - UI components, pages, and state management stores  
+- **Backend** - APIs, authentication, database models, and Socket.io real-time communication  
