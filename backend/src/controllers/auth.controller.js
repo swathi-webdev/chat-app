@@ -90,28 +90,25 @@ export const updateProfile = async (req, res) => {
     if (!profilePic) {
       return res.status(400).json({ message: "Profile picture is required" });
     }
-    
+
     console.log("Uploading image...");
     console.log(profilePic.substring(0, 40));
-
-   
+    // chatgpt
     const uploadResponse = await cloudinary.uploader.upload(profilePic, {
-       resource_type: "image",
+      resource_type: "image",
       folder: "chat-app",
     });
 
     console.log(uploadResponse);
 
-    // console.log(uploadResponse);
-    // const uploadResponse = await cloudinary.uploader.upload(profilePic);
-
-    const imageUrl = uploadResponse.secure_url;
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { profilePic: uploadResponse.secure_url },
       { new: true },
     );
+
     res.status(200).json(updatedUser);
+
   } catch (error) {
     console.log("Cloudinary Error:", error);
 
