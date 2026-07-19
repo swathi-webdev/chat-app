@@ -1,16 +1,97 @@
-# React + Vite
+# MyChat App 
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A real-time chat application built using the **MERN Stack**. Users can register, log in securely, and exchange messages in a simple and responsive interface.
 
-Currently, two official plugins are available:
+##  Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+* User Registration & Login
+* JWT Authentication
+* Real-time Chat
+* Responsive UI
+* Secure Password Hashing
+* Protected Routes
 
-## React Compiler
+##  Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend
 
-## Expanding the ESLint configuration
+* React.js
+* Vite
+* Tailwind CSS
+* Axios
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT
+* bcrypt
+
+##  Project Structure
+
+```
+mychat-app/
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│
+├── backend/
+│   ├── src/
+│   ├── package.json
+│   └── .env
+│
+└── README.md
+```
+
+##  Installation
+
+### Clone the repository
+
+```bash
+git clone https://github.com/your-username/mychat-app.git
+```
+
+### Install Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Install Backend
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+##  Environment Variables
+
+Create a `.env` file inside the `backend` folder.
+
+Example:
+
+```
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+```
+
+
+
+
+Frontend Developer | MERN Stack Enthusiast
+
+
+
+```
+
+
+
+
