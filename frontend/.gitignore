@@ -15,8 +15,7 @@ backend/node_modules/
 frontend/node_modules/
 
 # Build output
-dist/
-frontend/dist/
+# dist/ is included so Render always has prebuilt client assets
 dist-ssr/
 
 # Environment files
