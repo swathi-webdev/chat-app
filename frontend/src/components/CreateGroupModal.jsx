@@ -66,11 +66,12 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
           </div>
           {/* ✕ Close button — always visible */}
           <button
+            type="button"
             onClick={onClose}
             title="Close"
-            className="w-8 h-8 rounded-full bg-base-300 text-base-content hover:bg-error hover:text-error-content flex items-center justify-center transition-all duration-150 hover:scale-110 shadow-sm"
+            className="w-8 h-8 rounded-full bg-base-200 text-base-content hover:bg-error hover:text-white flex items-center justify-center transition-all duration-150 hover:scale-110 shadow-sm"
           >
-            <X className="size-4" />
+            <X className="size-4 stroke-[2.5]" />
           </button>
         </div>
 
@@ -106,7 +107,7 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
             <label className="label label-text font-medium text-base-content">Group Name</label>
             <input
               type="text"
-              className="input input-bordered w-full text-base-content bg-base-100 placeholder:text-base-content/40 focus:outline-none focus:border-primary"
+              className="input input-bordered w-full text-base-content bg-base-100 placeholder:text-base-content/50 focus:outline-none focus:border-primary text-sm font-normal"
               placeholder="Enter group name..."
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}

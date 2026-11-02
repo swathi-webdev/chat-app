@@ -1,57 +1,18 @@
-import { useState, useRef, useEffect } from "react";
-import { X, UserPlus, Loader, Phone, User, CheckCircle, Search } from "lucide-react";
+import { useState } from "react";
+import { X, UserPlus, Loader, Phone, User, AtSign, CheckCircle } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 
 const AddContactModal = ({ onClose }) => {
   const [name, setName] = useState("");
-  const [phoneOrEmail, setPhoneOrEmail] = useState("");
-  const [matchedUser, setMatchedUser] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { searchUsers, addContact } = useAuthStore();
+  const { addContact } = useAuthStore();
   const { getUsers } = useChatStore();
-  const debounceRef = useRef(null);
-
-  // Real-time lookup as user types name or phone/email
-  useEffect(() => {
-    const query = phoneOrEmail.trim() || name.trim();
-    if (!query || query.length < 2) {
-      setSuggestions([]);
-      setMatchedUser(null);
-      return;
-    }
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      const results = await searchUsers(query);
-      setIsSearching(false);
-      setSuggestions(results || []);
-      // If exact match on email or name, auto-select
-      const exact = (results || []).find(
-        (u) =>
-          u.email.toLowerCase() === query.toLowerCase() ||
-          u.fullName.toLowerCase() === query.toLowerCase()
-      );
-      if (exact) setMatchedUser(exact);
-    }, 350);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [name, phoneOrEmail, searchUsers]);
-
-  const handleSelectSuggestion = (user) => {
-    setMatchedUser(user);
-    if (!name.trim()) setName(user.fullName);
-    if (!phoneOrEmail.trim()) setPhoneOrEmail(user.email);
-    setSuggestions([]);
-  };
 
   const handleSave = async (e) => {
     e?.preventDefault();
@@ -59,23 +20,23 @@ const AddContactModal = ({ onClose }) => {
       toast.error("Please enter a contact name");
       return;
     }
-    if (!phoneOrEmail.trim() && !matchedUser) {
-      toast.error("Please enter a phone number or email");
+    if (!username.trim()) {
+      toast.error("Please enter a username or email");
       return;
     }
 
     setIsSaving(true);
-    const result = await addContact(
-      matchedUser?._id || null,
-      name.trim(),
-      phoneOrEmail.trim()
-    );
+    const result = await addContact({
+      customName: name.trim(),
+      username: username.trim(),
+      contactNo: phone.trim(),
+    });
     setIsSaving(false);
 
     if (result !== null) {
       setSaved(true);
       await getUsers(); // Refresh sidebar contacts
-      setTimeout(() => onClose(), 900); // Close after success flash
+      setTimeout(() => onClose(), 800); // Close after brief success indicator
     }
   };
 
@@ -90,11 +51,12 @@ const AddContactModal = ({ onClose }) => {
           </div>
           {/* ✕ Close exit button — always visible */}
           <button
+            type="button"
             onClick={onClose}
             title="Close"
-            className="w-8 h-8 rounded-full bg-base-300 text-base-content hover:bg-error hover:text-error-content flex items-center justify-center transition-all duration-150 hover:scale-110 shadow-sm"
+            className="w-8 h-8 rounded-full bg-base-200 text-base-content hover:bg-error hover:text-white flex items-center justify-center transition-all duration-150 hover:scale-110 shadow-sm"
           >
-            <X className="size-4" />
+            <X className="size-4 stroke-[2.5]" />
           </button>
         </div>
 
@@ -116,53 +78,35 @@ const AddContactModal = ({ onClose }) => {
             />
           </div>
 
-          {/* Phone Number / Email Field */}
+          {/* Username Field */}
           <div>
             <label className="label label-text font-medium mb-1 flex items-center gap-1.5 text-base-content">
-              <Phone className="size-3.5 text-primary" /> Phone Number 
+              <AtSign className="size-3.5 text-primary" /> Username or Email
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={phoneOrEmail}
-                onChange={(e) => setPhoneOrEmail(e.target.value)}
-                placeholder="Enter phone number "
-                className="input input-bordered w-full text-base-content bg-base-100 placeholder:text-base-content/40 focus:outline-none focus:border-primary pr-8"
-                maxLength={60}
-              />
-              {isSearching && (
-                <Loader className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-primary" />
-              )}
-            </div>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username or email..."
+              className="input input-bordered w-full text-base-content bg-base-100 placeholder:text-base-content/40 focus:outline-none focus:border-primary"
+              maxLength={60}
+            />
           </div>
 
-          {/* Suggestions Dropdown (if multiple matches found) */}
-          {suggestions.length > 0 && !matchedUser && (
-            <div className="border border-base-300 rounded-lg p-2 max-h-36 overflow-y-auto space-y-1 bg-base-200/50">
-              <p className="text-xs text-base-content/60 font-medium px-1 flex items-center gap-1">
-                <Search className="size-3" /> Matching Chatty users:
-              </p>
-              {suggestions.map((u) => (
-                <button
-                  type="button"
-                  key={u._id}
-                  onClick={() => handleSelectSuggestion(u)}
-                  className="w-full flex items-center gap-2 p-1.5 rounded-md hover:bg-base-200 text-left transition-colors"
-                >
-                  <img
-                    src={u.profilePic || "/avatar.png"}
-                    alt={u.fullName}
-                    className="size-6 rounded-full object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-base-content truncate">{u.fullName}</p>
-                    <p className="text-[10px] text-base-content/50 truncate">{u.email}</p>
-                  </div>
-                  <span className="text-[11px] text-primary font-medium shrink-0">Select</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Phone Number Field */}
+          <div>
+            <label className="label label-text font-medium mb-1 flex items-center gap-1.5 text-base-content">
+              <Phone className="size-3.5 text-primary" /> Phone Number (optional)
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Enter phone number..."
+              className="input input-bordered w-full text-base-content bg-base-100 placeholder:text-base-content/40 focus:outline-none focus:border-primary"
+              maxLength={20}
+            />
+          </div>
 
           {/* ─── Footer Buttons ─── */}
           <div className="pt-2 flex gap-2">
@@ -176,7 +120,7 @@ const AddContactModal = ({ onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={isSaving || saved || !name.trim() || (!phoneOrEmail.trim() && !matchedUser)}
+              disabled={isSaving || saved || !name.trim() || !username.trim()}
               className={`btn flex-1 gap-2 ${saved ? "btn-success" : "btn-primary"}`}
             >
               {isSaving ? (

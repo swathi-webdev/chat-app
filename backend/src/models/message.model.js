@@ -39,6 +39,51 @@ const messageSchema = new mongoose.Schema(
       enum: ["sent", "delivered", "read"],
       default: "sent",
     },
+    deliveredAt: {
+      type: Date,
+    },
+    readAt: {
+      type: Date,
+    },
+    // Reply-to reference
+    replyTo: {
+      messageId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+      },
+      text: {
+        type: String,
+        default: "",
+      },
+      senderName: {
+        type: String,
+        default: "",
+      },
+    },
+    // Sticker URL / identifier
+    sticker: {
+      type: String,
+      default: "",
+    },
+    // Soft-delete for individual user ("Delete for Me")
+    deletedFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    // "Delete for Everyone"
+    isDeletedForEveryone: {
+      type: Boolean,
+      default: false,
+    },
+    // Cleared conversation tracking ("Clear Chat")
+    clearedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,

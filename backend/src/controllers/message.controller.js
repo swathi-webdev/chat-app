@@ -21,11 +21,19 @@ export const getUsersForSidebar = async (req, res) => {
       const saved = currentUser.contacts.find(
         (c) => String(c.userId) === String(u._id)
       );
+      const isMuted = currentUser.mutedContacts?.some(
+        (m) => String(m.contactId) === String(u._id) && (!m.until || new Date(m.until) > new Date())
+      );
+      const isBlocked = currentUser.blockedUsers?.some(
+        (b) => String(b) === String(u._id)
+      );
       return {
         ...u.toObject(),
         customName: saved?.customName || "",
         contactNo: saved?.contactNo || "",
         displayName: saved?.customName?.trim() || u.fullName,
+        isMuted: !!isMuted,
+        isBlocked: !!isBlocked,
       };
     });
 
@@ -46,9 +54,24 @@ export const getMessages = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
+      clearedBy: { $ne: myId },
+      deletedFor: { $ne: myId },
+    }).sort({ createdAt: 1 });
+
+    const sanitized = messages.map((m) => {
+      if (m.isDeletedForEveryone) {
+        return {
+          ...m.toObject(),
+          text: "This message was deleted",
+          image: "",
+          fileUrl: "",
+          sticker: "",
+        };
+      }
+      return m.toObject();
     });
 
-    res.status(200).json(messages);
+    res.status(200).json(sanitized);
   } catch (error) {
     console.log("Error in getMessages:", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -71,9 +94,21 @@ function detectFileType(mimeType, fileName) {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, fileData, fileName, fileMime } = req.body;
+    const { text, image, fileData, fileName, fileMime, replyTo, sticker } = req.body;
     const receiverId = req.params.id;
     const senderId = req.user._id;
+
+    // Check blocking rules
+    const sender = await User.findById(senderId);
+    const receiver = await User.findById(receiverId);
+    if (!receiver) return res.status(404).json({ message: "User not found" });
+
+    if (sender.blockedUsers?.some((id) => String(id) === String(receiverId))) {
+      return res.status(403).json({ message: "You have blocked this user. Unblock to send messages." });
+    }
+    if (receiver.blockedUsers?.some((id) => String(id) === String(senderId))) {
+      return res.status(403).json({ message: "You cannot message this user." });
+    }
 
     let imageUrl = "";
     let fileUrl = "";
@@ -93,7 +128,7 @@ export const sendMessage = async (req, res) => {
       resolvedFileType = "image";
     }
 
-    // ── Handle generic file (document, video, zip, etc.) ───────────────────
+    // ── Handle generic file ─────────────────────────────────────────────────
     if (fileData && !image) {
       resolvedFileType = detectFileType(fileMime, fileName);
       try {
@@ -105,7 +140,6 @@ export const sendMessage = async (req, res) => {
         });
         fileUrl = uploadResponse.secure_url;
       } catch {
-        // Fallback: store base64 directly (works for small files)
         fileUrl = fileData;
       }
     }
@@ -113,16 +147,20 @@ export const sendMessage = async (req, res) => {
     // Receiver online?
     const receiverSocketId = getReceiverSocketId(receiverId);
     const initialStatus = receiverSocketId ? "delivered" : "sent";
+    const now = new Date();
 
     const newMessage = new Message({
       senderId,
       receiverId,
-      text,
+      text: text || "",
       image: imageUrl,
       fileUrl,
       fileName: resolvedFileName,
       fileType: resolvedFileType,
+      sticker: sticker || "",
+      replyTo: replyTo || null,
       status: initialStatus,
+      deliveredAt: initialStatus === "delivered" ? now : null,
     });
 
     await newMessage.save();
@@ -139,6 +177,7 @@ export const sendMessage = async (req, res) => {
         io.to(senderSocketId).emit("messageStatusUpdate", {
           messageId: newMessage._id,
           status: "delivered",
+          deliveredAt: now,
         });
       }
     }
@@ -155,16 +194,16 @@ export const markDelivered = async (req, res) => {
   try {
     const receiverId = req.user._id;
     const { senderId } = req.params;
+    const now = new Date();
 
     await Message.updateMany(
       { senderId, receiverId, status: "sent" },
-      { status: "delivered" }
+      { status: "delivered", deliveredAt: now }
     );
 
-    // Notify the original sender about delivery
     const senderSocketId = getReceiverSocketId(senderId);
     if (senderSocketId) {
-      io.to(senderSocketId).emit("messagesDelivered", { to: receiverId });
+      io.to(senderSocketId).emit("messagesDelivered", { to: receiverId, deliveredAt: now });
     }
 
     res.status(200).json({ ok: true });
@@ -179,21 +218,125 @@ export const markRead = async (req, res) => {
   try {
     const receiverId = req.user._id;
     const { senderId } = req.params;
+    const now = new Date();
 
     await Message.updateMany(
       { senderId, receiverId, status: { $in: ["sent", "delivered"] } },
-      { status: "read" }
+      { status: "read", readAt: now }
     );
 
-    // Notify the original sender about read
     const senderSocketId = getReceiverSocketId(senderId);
     if (senderSocketId) {
-      io.to(senderSocketId).emit("messagesRead", { by: receiverId });
+      io.to(senderSocketId).emit("messagesRead", { by: receiverId, readAt: now });
     }
 
     res.status(200).json({ ok: true });
   } catch (error) {
     console.log("Error in markRead:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/** Delete message for current user only ("Delete for Me") */
+export const deleteForMe = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const myId = req.user._id;
+
+    await Message.findByIdAndUpdate(messageId, {
+      $addToSet: { deletedFor: myId },
+    });
+
+    res.status(200).json({ success: true, messageId });
+  } catch (error) {
+    console.log("Error in deleteForMe:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/** Delete message for everyone */
+export const deleteForEveryone = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const myId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    if (String(message.senderId) !== String(myId)) {
+      return res.status(403).json({ message: "You can only delete your own messages for everyone" });
+    }
+
+    message.isDeletedForEveryone = true;
+    message.text = "This message was deleted";
+    message.image = "";
+    message.fileUrl = "";
+    message.sticker = "";
+    await message.save();
+
+    // Broadcast to both participants
+    const receiverSocketId = getReceiverSocketId(String(message.receiverId));
+    const senderSocketId = getReceiverSocketId(String(message.senderId));
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageDeletedForEveryone", { messageId });
+    if (senderSocketId) io.to(senderSocketId).emit("messageDeletedForEveryone", { messageId });
+
+    res.status(200).json({ success: true, message });
+  } catch (error) {
+    console.log("Error in deleteForEveryone:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/** Clear chat history for the current user */
+export const clearChat = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
+
+    await Message.updateMany(
+      {
+        $or: [
+          { senderId: myId, receiverId: userToChatId },
+          { senderId: userToChatId, receiverId: myId },
+        ],
+      },
+      {
+        $addToSet: { clearedBy: myId },
+      }
+    );
+
+    res.status(200).json({ success: true, message: "Chat cleared successfully" });
+  } catch (error) {
+    console.log("Error in clearChat:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/** Shared media (images and documents) for Contact Info modal */
+export const getSharedMedia = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
+
+    const mediaMessages = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId },
+      ],
+      clearedBy: { $ne: myId },
+      deletedFor: { $ne: myId },
+      isDeletedForEveryone: false,
+      $or: [
+        { image: { $exists: true, $ne: "" } },
+        { fileUrl: { $exists: true, $ne: "" } },
+      ],
+    })
+      .select("image fileUrl fileName fileType createdAt senderId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(mediaMessages);
+  } catch (error) {
+    console.log("Error in getSharedMedia:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

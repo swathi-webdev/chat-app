@@ -18,6 +18,10 @@ const groupMessageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    sticker: {
+      type: String,
+      default: "",
+    },
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,

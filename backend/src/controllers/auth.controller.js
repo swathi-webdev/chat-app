@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.models.js";
+import Report from "../models/report.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
@@ -200,38 +201,34 @@ export const searchUsers = async (req, res) => {
   }
 };
 
-// Add a contact (with optional customName and contactNo)
+// Add a contact (with customName, contactNo, and username/email)
 export const addContact = async (req, res) => {
   if (!checkDB(res)) return;
   try {
-    const { contactId, customName, contactNo, email } = req.body;
+    const { contactId, customName, contactNo, username, email } = req.body;
     const userId = req.user._id;
 
     let targetUserId = contactId;
 
-    // If contactId is not directly passed, locate user by phone, email, or name
+    // If contactId is not directly passed, locate user strictly by the entered username or email
     if (!targetUserId) {
-      const searchTerms = [email, contactNo, customName].filter((t) => t && t.trim() !== "");
-      if (searchTerms.length === 0) {
-        return res.status(400).json({ message: "Please enter a name, phone number, or email" });
+      const targetIdentifier = (username || email || "").trim();
+      if (!targetIdentifier) {
+        return res.status(400).json({ message: "Username or email is required to find the user" });
       }
 
-      const orConditions = [];
-      for (const term of searchTerms) {
-        const trimmed = term.trim();
-        orConditions.push({ email: trimmed.toLowerCase() });
-        orConditions.push({ fullName: new RegExp(`^${trimmed}$`, "i") });
-        orConditions.push({ fullName: new RegExp(trimmed, "i") });
-      }
-
+      // Search strictly by exact email or exact full name/username
       const foundUser = await User.findOne({
         _id: { $ne: userId },
-        $or: orConditions,
+        $or: [
+          { email: targetIdentifier.toLowerCase() },
+          { fullName: new RegExp(`^${targetIdentifier}$`, "i") },
+        ],
       }).select("-password");
 
       if (!foundUser) {
         return res.status(404).json({
-          message: "No user found with the provided details. Please verify the name or email.",
+          message: `No user found with username or email "${targetIdentifier}"`,
         });
       }
       targetUserId = foundUser._id;
@@ -303,6 +300,160 @@ export const getContacts = async (req, res) => {
     res.status(200).json(merged);
   } catch (error) {
     console.log("Error in getContacts:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Block a user
+export const blockUser = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const userId = req.user._id;
+    const { targetUserId } = req.params;
+
+    if (String(userId) === String(targetUserId)) {
+      return res.status(400).json({ message: "Cannot block yourself" });
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { blockedUsers: targetUserId },
+    });
+
+    res.status(200).json({ success: true, message: "User blocked successfully" });
+  } catch (error) {
+    console.log("Error in blockUser:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Unblock a user
+export const unblockUser = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const userId = req.user._id;
+    const { targetUserId } = req.params;
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { blockedUsers: targetUserId },
+    });
+
+    res.status(200).json({ success: true, message: "User unblocked successfully" });
+  } catch (error) {
+    console.log("Error in unblockUser:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Mute a contact
+export const muteContact = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const userId = req.user._id;
+    const { contactId } = req.params;
+    const { duration } = req.body; // "8h" | "1w" | "always"
+
+    let until = null;
+    const now = new Date();
+    if (duration === "8h") {
+      until = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    } else if (duration === "1w") {
+      until = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+
+    // Remove existing mute for this contact first
+    await User.findByIdAndUpdate(userId, {
+      $pull: { mutedContacts: { contactId } },
+    });
+
+    // Add new mute
+    await User.findByIdAndUpdate(userId, {
+      $push: { mutedContacts: { contactId, until } },
+    });
+
+    res.status(200).json({ success: true, contactId, until });
+  } catch (error) {
+    console.log("Error in muteContact:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Unmute a contact
+export const unmuteContact = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const userId = req.user._id;
+    const { contactId } = req.params;
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { mutedContacts: { contactId } },
+    });
+
+    res.status(200).json({ success: true, contactId });
+  } catch (error) {
+    console.log("Error in unmuteContact:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Save chat wallpaper for a specific contact
+export const setChatWallpaper = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const userId = req.user._id;
+    const { contactId, wallpaper } = req.body;
+
+    let finalWallpaper = wallpaper;
+    // Upload if base64 image
+    if (wallpaper && wallpaper.startsWith("data:image")) {
+      try {
+        const uploadRes = await cloudinary.uploader.upload(wallpaper, {
+          folder: "chat-app/wallpapers",
+        });
+        finalWallpaper = uploadRes.secure_url;
+      } catch (err) {
+        console.warn("Cloudinary wallpaper upload fallback:", err.message);
+      }
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { chatWallpapers: { contactId } },
+    });
+
+    if (finalWallpaper) {
+      await User.findByIdAndUpdate(userId, {
+        $push: { chatWallpapers: { contactId, wallpaper: finalWallpaper } },
+      });
+    }
+
+    res.status(200).json({ success: true, contactId, wallpaper: finalWallpaper });
+  } catch (error) {
+    console.log("Error in setChatWallpaper:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// File a report
+export const reportUser = async (req, res) => {
+  if (!checkDB(res)) return;
+  try {
+    const reporterId = req.user._id;
+    const { reportedUserId, reason, details } = req.body;
+
+    if (!reportedUserId || !reason) {
+      return res.status(400).json({ message: "Reason and reported user are required" });
+    }
+
+    const report = new Report({
+      reporterId,
+      reportedUserId,
+      reason,
+      details: details || "",
+    });
+
+    await report.save();
+    res.status(201).json({ success: true, message: "Report submitted successfully. Thank you." });
+  } catch (error) {
+    console.log("Error in reportUser:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };

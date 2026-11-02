@@ -44,6 +44,33 @@ const userSchema = new mongoose.Schema(
       default: "Hey there! I am using Chatty",
     },
     contacts: [contactSchema],
+    blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    mutedContacts: [
+      {
+        contactId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        until: {
+          type: Date,
+        },
+      },
+    ],
+    chatWallpapers: [
+      {
+        contactId: {
+          type: String,
+        },
+        wallpaper: {
+          type: String,
+        },
+      },
+    ],
     lastSeen: {
       type: Date,
       default: Date.now,

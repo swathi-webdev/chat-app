@@ -112,7 +112,7 @@ export const getGroupMessages = async (req, res) => {
 export const sendGroupMessage = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { text, image } = req.body;
+    const { text, image, sticker } = req.body;
     const senderId = req.user._id;
 
     const group = await Group.findById(groupId);
@@ -141,8 +141,9 @@ export const sendGroupMessage = async (req, res) => {
     const newMessage = new GroupMessage({
       groupId,
       senderId,
-      text,
+      text: text || "",
       image: imageUrl,
+      sticker: sticker || "",
       readBy: [senderId],
     });
 
@@ -150,7 +151,7 @@ export const sendGroupMessage = async (req, res) => {
 
     // Update group's lastMessage
     await Group.findByIdAndUpdate(groupId, {
-      lastMessage: text || "📷 Image",
+      lastMessage: text || (sticker ? "🎨 Sticker" : "📷 Image"),
       lastMessageAt: new Date(),
     });
 

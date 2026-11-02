@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useChatStore } from "../store/useChatStore";
 import SidebarSkeleton from "../skeletons/SidebarSkeleton";
-import { Users, UserPlus, Search, X, Plus, MessageSquare } from "lucide-react";
+import { Users, UserPlus, Search, X, Plus, MessageSquare, BellOff } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGroupStore } from "../store/useGroupStore";
 import AddContactModal from "./AddContactModal";
@@ -90,13 +90,16 @@ const Sidebar = () => {
     <>
       {/* ─── Sidebar ─────────────────────────────────────────────────────── */}
       <aside
-        className="h-full border-r border-base-300 flex flex-col relative shrink-0"
-        style={{ width: sidebarWidth, transition: isDragging.current ? "none" : "width 0.08s ease" }}
+        className="h-full border-r border-base-300 flex flex-col relative shrink-0 w-full md:w-auto"
+        style={{
+          width: window.innerWidth >= 768 ? sidebarWidth : "100%",
+          transition: isDragging.current ? "none" : "width 0.08s ease",
+        }}
       >
         {/* ── Drag handle ─────────────────────────────────────────────── */}
         <div
           ref={dragHandleRef}
-          className="sidebar-drag-handle"
+          className="sidebar-drag-handle hidden md:block"
           onMouseDown={onMouseDown}
           title="Drag to resize"
         />
@@ -261,7 +264,11 @@ const Sidebar = () => {
                     {!isCollapsed && (
                       <div className="flex flex-1 text-left min-w-0 items-center justify-between">
                         <div className="min-w-0">
-                          <div className="font-medium truncate">{displayName}</div>
+                          <div className="font-medium truncate flex items-center gap-1.5">
+                            <span className="truncate">{displayName}</span>
+                            {user.isMuted && <BellOff className="size-3 text-zinc-400 shrink-0" title="Muted" />}
+                            {user.isBlocked && <span className="badge badge-error badge-xs">Blocked</span>}
+                          </div>
                           {user.contactNo ? (
                             <div className="text-xs text-zinc-500 truncate">{user.contactNo}</div>
                           ) : (

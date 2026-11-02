@@ -99,14 +99,16 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Add contact by user ID (with optional customName and contactNo)
-  addContact: async (contactId, customName = "", contactNo = "") => {
+  // Add contact by user ID or username/customName/contactNo
+  addContact: async (dataOrId, customName = "", contactNo = "", username = "") => {
     try {
-      const res = await axiosInstance.post("/auth/add-contact", {
-        contactId,
-        customName,
-        contactNo,
-      });
+      let payload = {};
+      if (typeof dataOrId === "object" && dataOrId !== null) {
+        payload = dataOrId;
+      } else {
+        payload = { contactId: dataOrId, customName, contactNo, username };
+      }
+      const res = await axiosInstance.post("/auth/add-contact", payload);
       toast.success("Contact added successfully");
       return res.data;
     } catch (error) {
