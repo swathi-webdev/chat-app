@@ -10,9 +10,13 @@ import cookieParser from "cookie-parser";
 import cors from 'cors';
 import { app, server } from './lib/socket.js';
 import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 5001;
-const __dirname = path.resolve();
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
@@ -25,11 +29,29 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/groups", groupRoutes);
 
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-  app.get("/{*splat}", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
-  });
+// ── Production static frontend serving ──
+const candidatePaths = [
+  path.join(__dirname, "../../frontend/dist"),
+  path.join(process.cwd(), "frontend/dist"),
+  path.join(process.cwd(), "../frontend/dist"),
+  path.join(process.cwd(), "dist"),
+];
+
+const distPath = candidatePaths.find(
+  (p) => fs.existsSync(p) && fs.existsSync(path.join(p, "index.html"))
+);
+
+if (process.env.NODE_ENV === "production" || distPath) {
+  if (distPath) {
+    app.use(express.static(distPath));
+    app.get("/{*splat}", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    app.get("/{*splat}", (req, res) => {
+      res.status(200).send("Chatty Backend is running. Frontend build not found.");
+    });
+  }
 }
 
 connectDB();
