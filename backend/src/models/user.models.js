@@ -1,32 +1,56 @@
 import mongoose from "mongoose";
-const userSchema=new mongoose.Schema(
-    {
-        email:{
-            type:String,
-            required:true,
-            unique:true,
 
-        },
-        fullName:{
-            type:String,
-            required:true,
-
-        },
-        password:{
-            type:String,
-            required:true,
-            minlength:6,
-
-        },
-        profilePic:{
-            type:String,
-            default:"",
-
-        },
-
+const contactSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    {timestamps:true}
-
+    customName: {
+      type: String,
+      default: "",
+    },
+    contactNo: {
+      type: String,
+      default: "",
+    },
+  },
+  { _id: false }
 );
-const User=mongoose.model("User",userSchema);
+
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    fullName: {
+      type: String,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+    profilePic: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: String,
+      default: "Hey there! I am using Chatty",
+    },
+    contacts: [contactSchema],
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
+
+const User = mongoose.model("User", userSchema);
 export default User;
